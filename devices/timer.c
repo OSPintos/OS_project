@@ -75,16 +75,13 @@ int64_t timer_elapsed(int64_t then) {
 	return timer_ticks() - then;
 }
 
-<<<<<<< HEAD
+
 static struct list sleeping_threads = LIST_INITIALIZER (sleeping_threads);
 
-=======
->>>>>>> 61633618ec41bb47377806f63e2ef9de8794f289
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
  be turned on. */
 void timer_sleep(int64_t ticks) {
 	int64_t start = timer_ticks();
-<<<<<<< HEAD
 	
 	ASSERT(intr_get_level () == INTR_ON);
 	
@@ -102,12 +99,7 @@ void timer_sleep(int64_t ticks) {
 	
 	// while (timer_elapsed(start) < ticks)
 	//	thread_yield();
-=======
 
-	ASSERT(intr_get_level () == INTR_ON);
-	while (timer_elapsed(start) < ticks)
-		thread_yield();
->>>>>>> 61633618ec41bb47377806f63e2ef9de8794f289
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -169,7 +161,7 @@ void timer_print_stats(void) {
 /* Timer interrupt handler. */
 static void timer_interrupt(struct intr_frame *args UNUSED) {
 	ticks++;
-<<<<<<< HEAD
+
 
 	// checks the sleeping threads if any of them should be made ready
 	struct list_elem *e;
@@ -181,8 +173,6 @@ static void timer_interrupt(struct intr_frame *args UNUSED) {
 		}
 	}
 
-=======
->>>>>>> 61633618ec41bb47377806f63e2ef9de8794f289
 	thread_tick();
 }
 
