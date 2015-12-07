@@ -96,7 +96,7 @@ void timer_sleep(int64_t ticks) {
 	
 	// add the calling thread to sleeping threads list and yields it
     // the sleeping threads will be waken up by a timer interrupt (i.e in interrupt handler)
-	intr_disable();
+	enum intr_level old_level = intr_disable();
 
 	struct thread *thread_to_sleep = thread_current();
 	thread_to_sleep -> time_put_to_sleep = start;
@@ -105,7 +105,7 @@ void timer_sleep(int64_t ticks) {
 	list_push_back(&sleeping_threads, &(thread_to_sleep -> sleep_elem));
 	thread_block();
 
-	intr_enable();
+	intr_set_level(old_level);
 	
 	// while (timer_elapsed(start) < ticks)
 	//	thread_yield();
