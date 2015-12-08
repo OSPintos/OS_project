@@ -90,19 +90,11 @@ intr_enable (void)
   enum intr_level old_level = intr_get_level ();
   ASSERT (!intr_context ());
 
-<<<<<<< HEAD
-	/* Enable interrupts by setting the interrupt flag.
-	 See [IA32-v2b] "STI" and [IA32-v3a] 5.8.1 "Masking Maskable
-	 Hardware Interrupts". */
-	asm volatile ("sti");
-=======
   /* Enable interrupts by setting the interrupt flag.
 
      See [IA32-v2b] "STI" and [IA32-v3a] 5.8.1 "Masking Maskable
      Hardware Interrupts". */
   asm volatile ("sti");
->>>>>>> be212b3053833f51053b7d49168e87c29580e195
-
   return old_level;
 }
 
@@ -119,7 +111,7 @@ intr_disable (void)
 
   return old_level;
 }
-
+
 /* Initializes the interrupt system. */
 void
 intr_init (void)
@@ -193,23 +185,6 @@ intr_register_ext (uint8_t vec_no, intr_handler_func *handler,
 }
 
 /* Registers internal interrupt VEC_NO to invoke HANDLER, which
-<<<<<<< HEAD
- is named NAME for debugging purposes.  The interrupt handler
- will be invoked with interrupt status LEVEL.
- The handler will have descriptor privilege level DPL, meaning
- that it can be invoked intentionally when the processor is in
- the DPL or lower-numbered ring.  In practice, DPL==3 allows
- user mode to invoke the interrupts and DPL==0 prevents such
- invocation.  Faults and exceptions that occur in user mode
- still cause interrupts with DPL==0 to be invoked.  See
- [IA32-v3a] sections 4.5 "Privilege Levels" and 4.8.1.1
- "Accessing Nonconforming Code Segments" for further
- discussion. */
-void intr_register_int(uint8_t vec_no, int dpl, enum intr_level level,
-		intr_handler_func *handler, const char *name) {
-	ASSERT(vec_no < 0x20 || vec_no > 0x2f);
-	register_handler(vec_no, dpl, level, handler, name);
-=======
    is named NAME for debugging purposes.  The interrupt handler
    will be invoked with interrupt status LEVEL.
 
@@ -228,7 +203,6 @@ intr_register_int (uint8_t vec_no, int dpl, enum intr_level level,
 {
   ASSERT (vec_no < 0x20 || vec_no > 0x2f);
   register_handler (vec_no, dpl, level, handler, name);
->>>>>>> be212b3053833f51053b7d49168e87c29580e195
 }
 
 /* Returns true during processing of an external interrupt
@@ -249,39 +223,11 @@ intr_yield_on_return (void)
   ASSERT (intr_context ());
   yield_on_return = true;
 }
-
+
 /* 8259A Programmable Interrupt Controller. */
 
 /* Initializes the PICs.  Refer to [8259A] for details.
-<<<<<<< HEAD
- By default, interrupts 0...15 delivered by the PICs will go to
- interrupt vectors 0...15.  Those vectors are also used for CPU
- traps and exceptions, so we reprogram the PICs so that
- interrupts 0...15 are delivered to interrupt vectors 32...47
- (0x20...0x2f) instead. */
-static void pic_init(void) {
-	/* Mask all interrupts on both PICs. */
-	outb(PIC0_DATA, 0xff);
-	outb(PIC1_DATA, 0xff);
-
-	/* Initialize master. */
-	outb(PIC0_CTRL, 0x11); /* ICW1: single mode, edge triggered, expect ICW4. */
-	outb(PIC0_DATA, 0x20); /* ICW2: line IR0...7 -> irq 0x20...0x27. */
-	outb(PIC0_DATA, 0x04); /* ICW3: slave PIC on line IR2. */
-	outb(PIC0_DATA, 0x01); /* ICW4: 8086 mode, normal EOI, non-buffered. */
-
-	/* Initialize slave. */
-	outb(PIC1_CTRL, 0x11); /* ICW1: single mode, edge triggered, expect ICW4. */
-	outb(PIC1_DATA, 0x28); /* ICW2: line IR0...7 -> irq 0x28...0x2f. */
-	outb(PIC1_DATA, 0x02); /* ICW3: slave ID is 2. */
-	outb(PIC1_DATA, 0x01); /* ICW4: 8086 mode, normal EOI, non-buffered. */
-
-	/* Unmask all interrupts. */
-	outb(PIC0_DATA, 0x00);
-	outb(PIC1_DATA, 0x00);
-=======
-
-   By default, interrupts 0...15 delivered by the PICs will go to
+By default, interrupts 0...15 delivered by the PICs will go to
    interrupt vectors 0...15.  Those vectors are also used for CPU
    traps and exceptions, so we reprogram the PICs so that
    interrupts 0...15 are delivered to interrupt vectors 32...47
@@ -308,7 +254,6 @@ pic_init (void)
   /* Unmask all interrupts. */
   outb (PIC0_DATA, 0x00);
   outb (PIC1_DATA, 0x00);
->>>>>>> be212b3053833f51053b7d49168e87c29580e195
 }
 
 /* Sends an end-of-interrupt signal to the PIC for the given IRQ.
@@ -326,7 +271,7 @@ pic_end_of_interrupt (int irq)
   if (irq >= 0x28)
     outb (0xa0, 0x20);
 }
-
+
 /* Creates an gate that invokes FUNCTION.
 The gate has descriptor privilege level DPL, meaning that it
    can be invoked intentionally when the processor is in the DPL
@@ -386,7 +331,7 @@ make_idtr_operand (uint16_t limit, void *base)
 {
   return limit | ((uint64_t) (uint32_t) base << 16);
 }
-
+
 /* Interrupt handlers. */
 
 /* Handler for all interrupts, faults, and exceptions.  This

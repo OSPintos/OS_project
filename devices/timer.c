@@ -219,20 +219,13 @@ too_many_loops (unsigned loops)
 }
 
 /* Iterates through a simple loop LOOPS times, for implementing
-<<<<<<< HEAD
- brief delays.
- Marked NO_INLINE because code alignment can significantly
- affect timings, so that if this function was inlined
- differently in different places the results would be difficult
- to predict. */
-=======
    brief delays.
 
    Marked NO_INLINE because code alignment can significantly
    affect timings, so that if this function was inlined
    differently in different places the results would be difficult
    to predict. */
->>>>>>> be212b3053833f51053b7d49168e87c29580e195
+
 static void NO_INLINE
 busy_wait (int64_t loops) 
 {
@@ -241,28 +234,6 @@ busy_wait (int64_t loops)
 }
 
 /* Sleep for approximately NUM/DENOM seconds. */
-<<<<<<< HEAD
-static void real_time_sleep(int64_t num, int32_t denom) {
-	/* Convert NUM/DENOM seconds into timer ticks, rounding down.
-	 (NUM / DENOM) s
-	 ---------------------- = NUM * TIMER_FREQ / DENOM ticks.
-	 1 s / TIMER_FREQ ticks
-	 */
-	int64_t ticks = num * TIMER_FREQ / denom;
-
-	ASSERT(intr_get_level () == INTR_ON);
-	if (ticks > 0) {
-		/* We're waiting for at least one full timer tick.  Use
-		 timer_sleep() because it will yield the CPU to other
-		 processes. */
-		timer_sleep(ticks);
-	}
-	else {
-		/* Otherwise, use a busy-wait loop for more accurate
-		 sub-tick timing. */
-		real_time_delay(num, denom);
-	}
-=======
 static void
 real_time_sleep (int64_t num, int32_t denom) 
 {
@@ -288,7 +259,6 @@ real_time_sleep (int64_t num, int32_t denom)
          sub-tick timing. */
       real_time_delay (num, denom); 
     }
->>>>>>> be212b3053833f51053b7d49168e87c29580e195
 }
 
 /* Busy-wait for approximately NUM/DENOM seconds. */
