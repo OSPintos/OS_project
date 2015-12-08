@@ -341,29 +341,47 @@ void thread_foreach(thread_action_func *func, void *aux) {
 void thread_set_priority(int new_priority) {
 	thread_current()->priority = new_priority;
 	thread_current()->initial_priority = new_priority;
+	thread_current()->priority = max_donation(thread_current());
 	struct thread *t = check_next_thread_to_run();
 	if (thread_get_priority() < t->priority
 			&& thread_current() != idle_thread) {
-		//printf("%s-->%s\n",thread_name(),t->name);
 		thread_yield();
 	}
 }
 
-void thread_donate_priority(int new_priority) {
-	thread_current()->priority = new_priority;
-	struct thread *t = check_next_thread_to_run();
-	if (thread_get_priority() < t->priority
-			&& thread_current() != idle_thread) {
-		//printf("%s-->%s\n",thread_name(),t->name);
-		thread_yield();
+/*current thread donate its priority to the lock holder*/
+void thread_donate_priority(struct thread *t, int lock_id) {
+	t->priority = thread_get_priority();
+	t->donate[lock_id] = thread_get_priority();
+	thread_current()->lock_holder = t;
+	/*
+	struct thread *lock_holder = t->lock_holder;
+	struct thread *tt = t;
+	while(lock_holder != NULL){
+		lock_holder->priority = t->priority;
+		tt = lock_holder;
+		lock_holder = lock_holder->lock_holder;
 	}
+	*/
 }
 
-void thread_reset_priority() {
-	thread_current()->donate = 0;
-	int initial = thread_current()->initial_priority;
-	thread_current()->priority = initial;
+/* Reset priority after releasing the lock*/
+void thread_reset_priority(struct thread *t, int lock_id) {
+	thread_current()->donate[lock_id] = 0;
+	thread_current()->priority = max_donation(thread_current());
 }
+
+/*return the maximum possible priority from donations*/
+int max_donation(struct thread *t) {
+	int max = t->initial_priority;
+	int x = 0;
+	for (x = 0; x < 10; ++x) {
+		if (t->donate[x] > max)
+			max = (t->donate[x]);
+	}
+	return max;
+}
+
 /* Returns the current thread's priority. */
 int thread_get_priority(void) {
 	return thread_current()->priority;
@@ -464,7 +482,12 @@ static void init_thread(struct thread *t, const char *name, int priority) {
 	t->stack = (uint8_t *) t + PGSIZE;
 	t->priority = priority;
 	t->initial_priority = priority;
-	t->donate = 0;
+	t->i = 0;
+	t->lock_holder = NULL;
+	int x = 0;
+	for (x = 0; x < 10; ++x) {
+		t->donate[x] = 0;
+	}
 	t->magic = THREAD_MAGIC;
 	//list_push_back (&all_list, &t->allelem);
 	list_insert_ordered(&all_list, &t->allelem, more, NULL);
@@ -491,8 +514,11 @@ static struct thread *
 next_thread_to_run(void) {
 	if (list_empty(&ready_list))
 		return idle_thread;
-	else
-		return list_entry (list_pop_front (&ready_list), struct thread, elem);
+	else {
+		struct list_elem *e = list_max(&ready_list, less, NULL);
+		list_remove(e);
+		return list_entry (e, struct thread, elem);
+	}
 }
 
 static struct thread *
@@ -500,11 +526,13 @@ check_next_thread_to_run(void) {
 	if (list_empty(&ready_list))
 		return idle_thread;
 	else
-		return list_entry (list_front (&ready_list), struct thread, elem);
+		return list_entry (list_max(&ready_list,less, NULL),struct thread, elem);
 }
-void donate(struct thread *t, int d) {
-	t->donate = d;
-}
+/*
+ void pr_donate(struct thread *t, int *donation,int lock_id) {
+
+ }
+ */
 /* Completes a thread switch by activating the new thread's page
  tables, and, if the previous thread is dying, destroying it.
  At this function's invocation, we just switched from thread
@@ -563,10 +591,6 @@ static void schedule(void) {
 	if (cur != next)
 		prev = switch_threads(cur, next);
 	thread_schedule_tail(prev);
-	if (thread_current()->donate != 0) {
-		if (thread_current()->donate > thread_get_priority())
-			thread_donate_priority(thread_current()->donate);
-	}
 }
 
 /* Returns a tid to use for a new thread. */
