@@ -298,7 +298,7 @@ run_task (char **argv)
 static void
 run_actions (char **argv) 
 {
-	LOCK_ID= 10;
+	LOCK_ID= 5;
   /* An action. */
   struct action 
     {
