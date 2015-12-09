@@ -25,6 +25,10 @@ typedef int tid_t;
 #define PRI_MAX 63                      /* Highest priority. */
 #define NICE_MIN -20                    /* Lowest nice */
 #define NICE_MAX 20                     /* Highest nice */
+#define NICE_DEFAULT 0                  /* Default nice */
+#define LOAD_AVG_DEFAULT 0              /* Default load_avg */
+#define RECENT_CPU_DEFAULT 0            /* Default cpu reset */
+
 /* A kernel thread or user process.
    Each thread structure is stored in its own 4 kB page.  The
    thread structure itself sits at the very bottom of the page
@@ -85,7 +89,7 @@ struct thread {
 	int priority; /* Priority. */
 	int initial_priority;
 	struct thread *lock_holder;
-	int donate[10];
+	int donate[100];
 	int i;
 	struct list_elem allelem; /* List element for all threads list. */
 	int nice;                   /* nice value */
@@ -154,6 +158,6 @@ void thread_recalculate_recent_cpu();
 bool less(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool more(const struct list_elem *a, const struct list_elem *b, void *aux);
 void thread_reset_priority(struct thread *t, int lock_id);
-void thread_donate_priority(struct thread *t, int lock_id);
+void thread_donate_priority(struct thread *donor,struct thread *t, int lock_id);
 int max_donation(struct thread *t);
 #endif /* threads/thread.h */

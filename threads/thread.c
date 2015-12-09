@@ -95,9 +95,9 @@ void thread_init(void) {
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid();
 	if(thread_mlfqs){
-        initial_thread->nice = 0;
-        initial_thread->recent_cpu = 0;
-        load_avg = 0 ;
+        initial_thread->nice = NICE_DEFAULT;
+        initial_thread->recent_cpu = RECENT_CPU_DEFAULT;
+        load_avg = LOAD_AVG_DEFAULT ;
 	}
 }
 
@@ -359,32 +359,25 @@ void thread_set_priority(int new_priority) {
 }
 
 /*current thread donate its priority to the lock holder*/
-void thread_donate_priority(struct thread *t, int lock_id) {
-	t->priority = thread_get_priority();
-	t->donate[lock_id] = thread_get_priority();
-	thread_current()->lock_holder = t;
-	/*
-	struct thread *lock_holder = t->lock_holder;
-	struct thread *tt = t;
-	while(lock_holder != NULL){
-		lock_holder->priority = t->priority;
-		tt = lock_holder;
-		lock_holder = lock_holder->lock_holder;
+void thread_donate_priority(struct thread *donor,struct thread *t, int lock_id) {
+	t->donate[lock_id] = donor->priority;
+	t->priority = max_donation(t);
+	if(t->lock_holder != NULL){
+		thread_donate_priority(t, t->lock_holder, t->i);
 	}
-	*/
 }
 
 /* Reset priority after releasing the lock*/
 void thread_reset_priority(struct thread *t, int lock_id) {
-	thread_current()->donate[lock_id] = 0;
-	thread_current()->priority = max_donation(thread_current());
+	t->donate[lock_id] = 0;
+	t->priority = max_donation(t);
 }
 
 /*return the maximum possible priority from donations*/
 int max_donation(struct thread *t) {
 	int max = t->initial_priority;
 	int x = 0;
-	for (x = 0; x < 10; ++x) {
+	for (x = 0; x < 100; ++x) {
 		if (t->donate[x] > max)
 			max = (t->donate[x]);
 	}
@@ -535,10 +528,10 @@ static void init_thread(struct thread *t, const char *name, int priority) {
         t->initial_priority = priority;
 	}
 	else thread_calculate_priority(t);
-	t->i = 0;
+	t->i = -1;
 	t->lock_holder = NULL;
 	int x = 0;
-	for (x = 0; x < 10; ++x) {
+	for (x = 0; x < 100; ++x) {
 		t->donate[x] = 0;
 	}
 	t->magic = THREAD_MAGIC;

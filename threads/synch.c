@@ -175,12 +175,15 @@ void lock_acquire(struct lock *lock) {
 
 	if (lock->holder != NULL
 			&& lock->holder->initial_priority < thread_get_priority()) {
-		thread_donate_priority(lock->holder, lock->lock_id);
+		thread_current()->i = lock->lock_id;
+		thread_current()->lock_holder = lock->holder;
+		thread_donate_priority(thread_current(), lock->holder, lock->lock_id);
 	}
 
 	sema_down(&lock->semaphore);
-	thread_current()->lock_holder = NULL;
 	lock->holder = thread_current();
+	thread_current()->i = -1;
+	thread_current()->lock_holder = NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
