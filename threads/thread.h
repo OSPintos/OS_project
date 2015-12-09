@@ -23,7 +23,8 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-
+#define NICE_MIN -20                    /* Lowest nice */
+#define NICE_MAX 20                     /* Highest nice */
 /* A kernel thread or user process.
    Each thread structure is stored in its own 4 kB page.  The
    thread structure itself sits at the very bottom of the page
@@ -87,6 +88,8 @@ struct thread {
 	int donate[10];
 	int i;
 	struct list_elem allelem; /* List element for all threads list. */
+	int nice;                   /* nice value */
+	int recent_cpu;             /* recent cpu value */
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem; /* List element. */
@@ -99,7 +102,7 @@ struct thread {
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
-	
+
 	struct list_elem sleep_elem;
 	struct list_elem ready_elem;
 	int64_t time_put_to_sleep;
@@ -142,6 +145,11 @@ int thread_get_nice(void);
 void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
+void thread_calculate_priority(struct thread *t);
+void thread_calculate_recent_cpu(struct thread *t);
+void calculate_load_avg(void);
+void thread_recalculate_priority();
+void thread_recalculate_recent_cpu();
 
 bool less(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool more(const struct list_elem *a, const struct list_elem *b, void *aux);
