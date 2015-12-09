@@ -95,7 +95,6 @@ intr_enable (void)
      See [IA32-v2b] "STI" and [IA32-v3a] 5.8.1 "Masking Maskable
      Hardware Interrupts". */
   asm volatile ("sti");
-
   return old_level;
 }
 
@@ -112,7 +111,7 @@ intr_disable (void)
 
   return old_level;
 }
-
+
 /* Initializes the interrupt system. */
 void
 intr_init (void)
@@ -224,12 +223,11 @@ intr_yield_on_return (void)
   ASSERT (intr_context ());
   yield_on_return = true;
 }
-
+
 /* 8259A Programmable Interrupt Controller. */
 
 /* Initializes the PICs.  Refer to [8259A] for details.
-
-   By default, interrupts 0...15 delivered by the PICs will go to
+By default, interrupts 0...15 delivered by the PICs will go to
    interrupt vectors 0...15.  Those vectors are also used for CPU
    traps and exceptions, so we reprogram the PICs so that
    interrupts 0...15 are delivered to interrupt vectors 32...47
@@ -273,10 +271,9 @@ pic_end_of_interrupt (int irq)
   if (irq >= 0x28)
     outb (0xa0, 0x20);
 }
-
-/* Creates an gate that invokes FUNCTION.
 
-   The gate has descriptor privilege level DPL, meaning that it
+/* Creates an gate that invokes FUNCTION.
+The gate has descriptor privilege level DPL, meaning that it
    can be invoked intentionally when the processor is in the DPL
    or lower-numbered ring.  In practice, DPL==3 allows user mode
    to call into the gate and DPL==0 prevents such calls.  Faults
@@ -334,7 +331,7 @@ make_idtr_operand (uint16_t limit, void *base)
 {
   return limit | ((uint64_t) (uint32_t) base << 16);
 }
-
+
 /* Interrupt handlers. */
 
 /* Handler for all interrupts, faults, and exceptions.  This
