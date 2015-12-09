@@ -33,16 +33,14 @@ typedef int tid_t;
 #define fixed_point_f (1<<fixed_point_q)  /* f for fixed point operations */
 #define int_to_fixed_point(N) N*fixed_point_f
 #define fp_to_int_round_zero(X) X/fixed_point_f
-#define fp_to_int_round_nearest(X) /
- (X >= 0 ? ((X + (fixed_point_f / 2)) / fixed_point_f) : ((X - (fixed_point_f / 2)) / fixed_point_f))
+#define fp_to_int_round_nearest(X) (X >= 0) ? ((X + (fixed_point_f / 2)) / fixed_point_f): ((X - (fixed_point_f / 2)) / fixed_point_f)
 #define add_fixed_point(X,Y) X+Y
 #define sub_y_from_x(X,Y) X-Y
 #define add_x_and_n(X,N) X+fixed_point_f*N
 #define sub_n_from_x(X,N) X-N*fixed_point_f
 #define fixed_point_multiply(X,Y) ((int64_t) X) * X / fixed_point_f
 #define mul_x_n(X,N) X*N
-#define fixed_point_div(X,Y) /
- ((int64_t) X) * fixed_point_f / Y
+#define fixed_point_div(X,Y) ((int64_t) X) * fixed_point_f / Y
 #define div_x_n(X,N) X/N
 
 /* A kernel thread or user process.
@@ -168,8 +166,8 @@ int thread_get_load_avg(void);
 void thread_calculate_priority(struct thread *t);
 void thread_calculate_recent_cpu(struct thread *t);
 void calculate_load_avg(void);
-void thread_recalculate_priority();
-void thread_recalculate_recent_cpu();
+void thread_recalculate_priority(void);
+void thread_recalculate_recent_cpu(void);
 
 bool less(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool more(const struct list_elem *a, const struct list_elem *b, void *aux);

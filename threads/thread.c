@@ -416,10 +416,10 @@ void calculate_load_avg(void) {
         ready_threads++;
     }
     int coeff1 = int_to_fixed_point(59);
-    coeff1 = div_x_n(coeff , 60);
+    coeff1 = div_x_n(coeff1 , 60);
     coeff1 = fixed_point_multiply(coeff1 , load_avg);
     int coeff2 = int_to_fixed_point(1);
-    coeff2 = div_x_n(coeff , 60);
+    coeff2 = div_x_n(coeff2 , 60);
     coeff2 = fixed_point_multiply(coeff2 , ready_threads);
     load_avg = add_fixed_point(coeff1 , coeff2);
 }
@@ -453,7 +453,7 @@ void thread_calculate_priority(struct thread *t){
     t->priority = new_priority_value;
 }
 
-void thread_recalculate_priority(){
+void thread_recalculate_priority(void){
     struct list_elem *e;
     for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)){
         struct thread * t = list_entry (e, struct thread, allelem);
@@ -461,7 +461,7 @@ void thread_recalculate_priority(){
     }
 }
 
-void thread_recalculate_recent_cpu(){
+void thread_recalculate_recent_cpu(void){
     struct list_elem *e;
     for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)){
         struct thread * t = list_entry (e, struct thread, allelem);
