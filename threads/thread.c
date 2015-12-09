@@ -406,7 +406,8 @@ int thread_get_nice(void) {
 
 /* Returns 100 times the system load average. */
 int thread_get_load_avg(void) {
-	return 100*load_avg;
+	int curr_load_avg = mul_x_n(load_avg , 100);
+	return fp_to_int_round_nearest(curr_load_avg);
 }
 
 void calculate_load_avg(void) {
@@ -414,16 +415,30 @@ void calculate_load_avg(void) {
     if(thread_current() != idle_thread){
         ready_threads++;
     }
-    load_avg = (59/60)*load_avg + (1/60)*ready_threads;
+    int coeff1 = int_to_fixed_point(59);
+    coeff1 = div_x_n(coeff , 60);
+    coeff1 = fixed_point_multiply(coeff1 , load_avg);
+    int coeff2 = int_to_fixed_point(1);
+    coeff2 = div_x_n(coeff , 60);
+    coeff2 = fixed_point_multiply(coeff2 , ready_threads);
+    load_avg = add_fixed_point(coeff1 , coeff2);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void) {
-	return 100 * thread_current()->recent_cpu;
+	int recent_cpu = thread_current()->recent_cpu;
+	recent_cpu = mul_x_n(recent_cpu , 100);
+	return fp_to_int_round_nearest(recent_cpu);
 }
 
 void thread_calculate_recent_cpu(struct thread *t){
-    t->recent_cpu = ((2*load_avg)/(2*load_avg + 1)) * t->recent_cpu + t->nice;
+    int curr_load_avg = load_avg;
+    int recent_cpu;
+    curr_load_avg = mul_x_n(curr_load_avg , 2);
+    recent_cpu = fixed_point_div(curr_load_avg , add_x_and_n(curr_load_avg , 1));
+    recent_cpu = fixed_point_multiply(recent_cpu , t->recent_cpu);
+    recent_cpu = add_x_and_n(recent_cpu , t->nice);
+    t->recent_cpu = recent_cpu;
 }
 
 void thread_calculate_priority(struct thread *t){
