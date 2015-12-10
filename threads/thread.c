@@ -561,16 +561,11 @@ static void init_thread(struct thread *t, const char *name, int priority) {
 	t->status = THREAD_BLOCKED;
 	strlcpy(t->name, name, sizeof t->name);
 	t->stack = (uint8_t *) t + PGSIZE;
-<<<<<<< HEAD
-	t->priority = priority;
-	t->initial_priority = priority;
-=======
 	if(!thread_mlfqs){
         t->priority = priority;
         t->initial_priority = priority;
 	}
 	else thread_calculate_priority(t);
->>>>>>> d5bc49f06a0f6e22ec5bec1a9c36f483f3181c5a
 	t->i = -1;
 	t->lock_holder = NULL;
 	int x = 0;
