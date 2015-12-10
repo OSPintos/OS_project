@@ -692,3 +692,11 @@ static tid_t allocate_tid(void) {
 /* Offset of `stack' member within `struct thread'.
  Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+
+bool lessWakeupTime(const struct list_elem *a, const struct list_elem *b, void *aux){
+	struct thread *t1 = list_entry (a, struct thread, sleep_elem);
+	struct thread *t2 = list_entry (b, struct thread, sleep_elem);
+	return t1 -> time_put_to_sleep + t1 -> ticks_to_remain_sleep <
+		t2 -> time_put_to_sleep + t2 -> ticks_to_remain_sleep;
+}

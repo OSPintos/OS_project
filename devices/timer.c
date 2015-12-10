@@ -102,7 +102,34 @@ void timer_sleep(int64_t ticks) {
 	thread_to_sleep -> time_put_to_sleep = start;
 	thread_to_sleep -> ticks_to_remain_sleep = ticks;
 
-	list_push_back(&sleeping_threads, &(thread_to_sleep -> sleep_elem));
+	/******************** for debugging only ************************************/
+	// struct thread *th = list_begin(&sleeping_threads);
+	// printf("sleeping_threads header : %d\n", th -> time_put_to_sleep + th->ticks_to_remain_sleep);
+	// printf("inserted now : %d\n", thread_to_sleep-> time_put_to_sleep + thread_to_sleep->ticks_to_remain_sleep);
+	/******************** for debugging only ************************************/
+
+
+	// list_push_back(&sleeping_threads, &(thread_to_sleep -> sleep_elem));
+	// insert ordered to reduce looping time in the interrupt handler
+	list_insert_ordered(&sleeping_threads, &(thread_to_sleep -> sleep_elem),
+                          lessWakeupTime, NULL);
+
+	/******************** for debugging only ************************************/
+	//int64_t time_put_to_sleep;
+	//int64_t ticks_to_remain_sleep
+	
+	// list_sort(&sleeping_threads, lessWakeupTime, NULL);
+
+	// printf("first is idle ? %d \n", idle_thread == list_begin(&sleeping_threads));
+
+	// struct list_elem *e;
+	// for (e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads); e = list_next (e)){
+		// struct thread * t = list_entry (e, struct thread, sleep_elem);
+		// printf("%d ", t -> time_put_to_sleep + t->ticks_to_remain_sleep);	
+	// }
+	// printf("\n");
+	/******************** for debugging only ************************************/
+
 	thread_block();
 
 	intr_set_level(old_level);
@@ -192,7 +219,8 @@ static void timer_interrupt(struct intr_frame *args UNUSED) {
 		if(timer_elapsed(t -> time_put_to_sleep) >= t -> ticks_to_remain_sleep){
 			list_remove(e);
 			thread_unblock(t);
-		}
+		}else break; // all remaining threads will have wakeup time larger than the current
+		// therefore will not be waken-up now [reduce time spent in timer_interrupt]
 	}
 	thread_tick();
 }
