@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -99,6 +100,7 @@ void thread_init(void) {
         initial_thread->recent_cpu = RECENT_CPU_DEFAULT;
         load_avg = LOAD_AVG_DEFAULT ;
 	}
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -120,7 +122,6 @@ void thread_start(void) {
  Thus, this function runs in an external interrupt context. */
 void thread_tick(void) {
 	struct thread *t = thread_current();
-
 	/* Update statistics. */
 	if (t == idle_thread)
 		idle_ticks++;
@@ -130,9 +131,17 @@ void thread_tick(void) {
 #endif
 	else{
 		kernel_ticks++;
-        t->recent_cpu++;
 	}
-
+	if(thread_mlfqs){
+        if(timer_ticks()%TIMER_FREQ==0){
+            calculate_load_avg();
+            thread_recalculate_recent_cpu();
+        }
+        if(thread_current()!=idle_thread)t->recent_cpu = add_x_and_n(t->recent_cpu , 1);
+        if(timer_ticks()%TIME_SLICE==0){
+            thread_recalculate_priority();
+        }
+	}
 	/* Enforce preemption. */
 	if (++thread_ticks >= TIME_SLICE)
 		intr_yield_on_return();
@@ -406,66 +415,80 @@ int thread_get_nice(void) {
 
 /* Returns 100 times the system load average. */
 int thread_get_load_avg(void) {
-	int curr_load_avg = mul_x_n(load_avg , 100);
-	return fp_to_int_round_nearest(curr_load_avg);
+    int curr_load_avg = load_avg;
+	curr_load_avg = mul_x_n(curr_load_avg , 100);
+	int rounded = fp_to_int_round_nearest(curr_load_avg);
+	return rounded;
 }
 
 void calculate_load_avg(void) {
+    printf("%d\n",load_avg);
+    int coeff1 = int_to_fixed_point(59);
+    coeff1 = div_x_n(coeff1 , 60);
+    int coeff2 = int_to_fixed_point(1);
+    coeff2 = div_x_n(coeff2 , 60);
     int ready_threads = list_size(&ready_list);
     if(thread_current() != idle_thread){
         ready_threads++;
     }
-    int coeff1 = int_to_fixed_point(59);
-    coeff1 = div_x_n(coeff1 , 60);
     coeff1 = fixed_point_multiply(coeff1 , load_avg);
-    int coeff2 = int_to_fixed_point(1);
-    coeff2 = div_x_n(coeff2 , 60);
-    coeff2 = fixed_point_multiply(coeff2 , ready_threads);
+    coeff2 = mul_x_n(coeff2 , ready_threads);
+    //printf("%d\n",add_fixed_point(coeff1 , coeff2));
     load_avg = add_fixed_point(coeff1 , coeff2);
+    printf("%d\n",load_avg);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void) {
 	int recent_cpu = thread_current()->recent_cpu;
 	recent_cpu = mul_x_n(recent_cpu , 100);
-	return fp_to_int_round_nearest(recent_cpu);
+	int rounded = fp_to_int_round_nearest(recent_cpu);
+	return rounded;
 }
 
 void thread_calculate_recent_cpu(struct thread *t){
+    int recent_cpu = t->recent_cpu;
     int curr_load_avg = load_avg;
-    int recent_cpu;
+    int temp;
     curr_load_avg = mul_x_n(curr_load_avg , 2);
-    recent_cpu = fixed_point_div(curr_load_avg , add_x_and_n(curr_load_avg , 1));
-    recent_cpu = fixed_point_multiply(recent_cpu , t->recent_cpu);
+    temp = add_x_and_n(curr_load_avg,1);
+    curr_load_avg = fixed_point_div(curr_load_avg , temp);
+    recent_cpu = fixed_point_multiply(recent_cpu , curr_load_avg);
     recent_cpu = add_x_and_n(recent_cpu , t->nice);
     t->recent_cpu = recent_cpu;
+    //printf("curr=%d , load=%d , recent=%d ,nice=%d\n",curr_load_avg , load_avg , recent_cpu , t->nice);
 }
 
 void thread_calculate_priority(struct thread *t){
     ASSERT(thread_mlfqs);
-    int new_priority_value = PRI_MAX - (t->recent_cpu / 4) - (t->nice * 2);
-    if(new_priority_value > PRI_MAX){
-        new_priority_value = PRI_MAX;
+    int new_priority_value = int_to_fixed_point(PRI_MAX);
+    int recent_cpu = t->recent_cpu;
+    recent_cpu = div_x_n(recent_cpu,4);
+    new_priority_value = sub_y_from_x(new_priority_value,recent_cpu);
+    new_priority_value = sub_n_from_x(new_priority_value , int_to_fixed_point(t->nice*2));
+    int priority = fp_to_int_round_zero(new_priority_value);
+    if(priority > PRI_MAX){
+        priority = PRI_MAX;
     }
-    else if(new_priority_value < PRI_MIN){
-        new_priority_value = PRI_MIN;
+    else if(priority < PRI_MIN){
+        priority = PRI_MIN;
     }
-    t->priority = new_priority_value;
+    t->priority = priority;
 }
 
 void thread_recalculate_priority(void){
     struct list_elem *e;
     for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)){
-        struct thread * t = list_entry (e, struct thread, allelem);
-        thread_calculate_priority(t);
+       // struct thread * t =
+        thread_calculate_priority(list_entry (e, struct thread, allelem));
     }
 }
 
 void thread_recalculate_recent_cpu(void){
     struct list_elem *e;
     for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)){
-        struct thread * t = list_entry (e, struct thread, allelem);
-        thread_calculate_recent_cpu(t);
+        //struct thread * t = ;
+        thread_calculate_recent_cpu(list_entry (e, struct thread, allelem));
     }
 }
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -533,7 +556,6 @@ static void init_thread(struct thread *t, const char *name, int priority) {
 	ASSERT(t != NULL);
 	ASSERT(PRI_MIN <= priority && priority <= PRI_MAX);
 	ASSERT(name != NULL);
-
 	memset(t, 0, sizeof *t);
 	t->status = THREAD_BLOCKED;
 	strlcpy(t->name, name, sizeof t->name);

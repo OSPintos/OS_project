@@ -36,11 +36,11 @@ typedef int tid_t;
 #define fp_to_int_round_nearest(X) (X >= 0) ? ((X + (fixed_point_f / 2)) / fixed_point_f): ((X - (fixed_point_f / 2)) / fixed_point_f)
 #define add_fixed_point(X,Y) X+Y
 #define sub_y_from_x(X,Y) X-Y
-#define add_x_and_n(X,N) X+fixed_point_f*N
-#define sub_n_from_x(X,N) X-N*fixed_point_f
+#define add_x_and_n(X,N) X+(N*fixed_point_f)
+#define sub_n_from_x(X,N) X-(N*fixed_point_f)
 #define fixed_point_multiply(X,Y) ((int64_t) X) * X / fixed_point_f
 #define mul_x_n(X,N) X*N
-#define fixed_point_div(X,Y) ((int64_t) X) * fixed_point_f / Y
+#define fixed_point_div(X,Y) ((int64_t) X)*fixed_point_f/Y
 #define div_x_n(X,N) X/N
 
 /* A kernel thread or user process.

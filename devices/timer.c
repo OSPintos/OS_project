@@ -184,13 +184,7 @@ timer_print_stats (void)
 /* Timer interrupt handler. */
 static void timer_interrupt(struct intr_frame *args UNUSED) {
 	ticks++;
-	if(thread_mlfqs && ticks%4==0){
-        thread_recalculate_priority();
-	}
-	if(thread_mlfqs && timer_ticks()%TIMER_FREQ==0){
-        thread_recalculate_recent_cpu();
-        calculate_load_avg();
-	}
+
 	// checks the sleeping threads if any of them should be made ready
 	struct list_elem *e;
 	for (e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads); e = list_next (e)){
@@ -200,7 +194,6 @@ static void timer_interrupt(struct intr_frame *args UNUSED) {
 			thread_unblock(t);
 		}
 	}
-
 	thread_tick();
 }
 
