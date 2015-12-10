@@ -172,6 +172,7 @@ void thread_recalculate_recent_cpu(void);
 bool less(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool more(const struct list_elem *a, const struct list_elem *b, void *aux);
 void thread_reset_priority(struct thread *t, int lock_id);
-void thread_donate_priority(struct thread *donor,struct thread *t, int lock_id);
+
+void thread_donate_priority(struct thread *donor, struct thread *t, int lock_id);
 int max_donation(struct thread *t);
 #endif /* threads/thread.h */
