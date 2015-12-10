@@ -100,7 +100,6 @@ void thread_init(void) {
         initial_thread->recent_cpu = RECENT_CPU_DEFAULT;
         load_avg = LOAD_AVG_DEFAULT ;
 	}
-
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -230,7 +229,6 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
 
 	/* Add to run queue. */
 	thread_unblock(t);
-
 	return tid;
 }
 
@@ -459,7 +457,7 @@ void thread_calculate_recent_cpu(struct thread *t){
     curr_load_avg = mul_x_n(curr_load_avg , 2);
     temp = add_x_and_n(curr_load_avg,1);
     curr_load_avg = fixed_point_div(curr_load_avg , temp);
-    recent_cpu = fixed_point_multiply(recent_cpu , curr_load_avg);
+    recent_cpu = fixed_point_multiply(curr_load_avg, recent_cpu);
     recent_cpu = add_x_and_n(recent_cpu , t->nice);
     t->recent_cpu = recent_cpu;
     //printf("%d\n" , t->recent_cpu);
@@ -469,10 +467,9 @@ void thread_calculate_recent_cpu(struct thread *t){
 void thread_calculate_priority(struct thread *t){
     ASSERT(thread_mlfqs);
     int new_priority_value = int_to_fixed_point(PRI_MAX);
-    int recent_cpu = t->recent_cpu;
-    recent_cpu = div_x_n(recent_cpu,4);
+    int recent_cpu = div_x_n(t->recent_cpu,4);
     new_priority_value = sub_y_from_x(new_priority_value,recent_cpu);
-    new_priority_value = sub_n_from_x(new_priority_value , int_to_fixed_point(t->nice*2));
+    new_priority_value = sub_n_from_x(new_priority_value , t->nice*2);
     int priority = fp_to_int_round_zero(new_priority_value);
     if(priority > PRI_MAX){
         priority = PRI_MAX;
