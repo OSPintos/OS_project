@@ -406,7 +406,7 @@ void thread_set_nice(int nice) {
     thread_current()->nice = nice;
     thread_calculate_priority(thread_current());
     if(!list_empty(&ready_list)){
-        struct thread * t = list_entry (list_max (&ready_list,less, NULL),struct thread,elem);
+        struct thread * t = list_entry (list_max (&ready_list,&less, NULL),struct thread,elem);
         if(thread_current ()->priority < t->priority)
             thread_yield ();
     }
@@ -427,7 +427,7 @@ int thread_get_load_avg(void) {
 }
 
 void calculate_load_avg(void) {
-    printf("da5al ");
+    //printf("da5al ");
     int coeff1 = int_to_fixed_point(59);
     coeff1 = div_x_n(coeff1 , 60);
     int coeff2 = int_to_fixed_point(1);
@@ -440,7 +440,7 @@ void calculate_load_avg(void) {
     coeff2 = mul_x_n(coeff2 , ready_threads);
     //printf("%d\n",add_fixed_point(coeff1 , coeff2));
     load_avg = add_fixed_point(coeff1 , coeff2);
-    printf("%d\n",load_avg);
+    //printf("%d\n",load_avg);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -452,7 +452,7 @@ int thread_get_recent_cpu(void) {
 }
 
 void thread_calculate_recent_cpu(struct thread *t){
-    printf("entered ");
+    //printf("entered ");
     int recent_cpu = t->recent_cpu;
     int curr_load_avg = load_avg;
     int temp;
@@ -462,7 +462,7 @@ void thread_calculate_recent_cpu(struct thread *t){
     recent_cpu = fixed_point_multiply(recent_cpu , curr_load_avg);
     recent_cpu = add_x_and_n(recent_cpu , t->nice);
     t->recent_cpu = recent_cpu;
-    printf("%d\n" , t->recent_cpu);
+    //printf("%d\n" , t->recent_cpu);
     //printf("curr=%d , load=%d , recent=%d ,nice=%d\n",curr_load_avg , load_avg , recent_cpu , t->nice);
 }
 
