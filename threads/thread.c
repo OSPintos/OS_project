@@ -405,6 +405,11 @@ void thread_set_nice(int nice) {
 	ASSERT(nice <= NICE_MAX);
     thread_current()->nice = nice;
     thread_calculate_priority(thread_current());
+    if(!list_empty(&ready_list)){
+        struct thread * t = list_entry (list_max (&ready_list,less, NULL),struct thread,elem);
+        if(thread_current ()->priority < t->priority)
+            thread_yield ();
+    }
 }
 
 /* Returns the current thread's nice value. */
@@ -422,7 +427,7 @@ int thread_get_load_avg(void) {
 }
 
 void calculate_load_avg(void) {
-    printf("%d\n",load_avg);
+    printf("da5al ");
     int coeff1 = int_to_fixed_point(59);
     coeff1 = div_x_n(coeff1 , 60);
     int coeff2 = int_to_fixed_point(1);
@@ -447,6 +452,7 @@ int thread_get_recent_cpu(void) {
 }
 
 void thread_calculate_recent_cpu(struct thread *t){
+    printf("entered ");
     int recent_cpu = t->recent_cpu;
     int curr_load_avg = load_avg;
     int temp;
@@ -456,6 +462,7 @@ void thread_calculate_recent_cpu(struct thread *t){
     recent_cpu = fixed_point_multiply(recent_cpu , curr_load_avg);
     recent_cpu = add_x_and_n(recent_cpu , t->nice);
     t->recent_cpu = recent_cpu;
+    printf("%d\n" , t->recent_cpu);
     //printf("curr=%d , load=%d , recent=%d ,nice=%d\n",curr_load_avg , load_avg , recent_cpu , t->nice);
 }
 
@@ -561,18 +568,20 @@ static void init_thread(struct thread *t, const char *name, int priority) {
 	t->status = THREAD_BLOCKED;
 	strlcpy(t->name, name, sizeof t->name);
 	t->stack = (uint8_t *) t + PGSIZE;
-	if(!thread_mlfqs){
+	t->magic = THREAD_MAGIC;
+	if(thread_mlfqs){
+        thread_calculate_priority(t);
+	}
+	else{
         t->priority = priority;
         t->initial_priority = priority;
+        t->i = -1;
+        t->lock_holder = NULL;
+        int x = 0;
+        for (x = 0; x < 100; ++x) {
+            t->donate[x] = 0;
+        }
 	}
-	else thread_calculate_priority(t);
-	t->i = -1;
-	t->lock_holder = NULL;
-	int x = 0;
-	for (x = 0; x < 100; ++x) {
-		t->donate[x] = 0;
-	}
-	t->magic = THREAD_MAGIC;
 	//list_push_back (&all_list, &t->allelem);
 	list_insert_ordered(&all_list, &t->allelem, more, NULL);
 }
