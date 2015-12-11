@@ -166,8 +166,6 @@ int thread_get_load_avg(void);
 void thread_calculate_priority(struct thread *t);
 void thread_calculate_recent_cpu(struct thread *t);
 void calculate_load_avg(void);
-void thread_recalculate_priority(void);
-void thread_recalculate_recent_cpu(void);
 
 bool less(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool more(const struct list_elem *a, const struct list_elem *b, void *aux);

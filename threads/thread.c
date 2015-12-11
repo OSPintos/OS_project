@@ -134,16 +134,16 @@ void thread_tick(void) {
 	if(thread_mlfqs){
         if(timer_ticks()%TIMER_FREQ==0){
             calculate_load_avg();
-            thread_recalculate_recent_cpu();
+            thread_foreach(&thread_calculate_recent_cpu ,  NULL);
         }
         if(thread_current()!=idle_thread)t->recent_cpu = add_x_and_n(t->recent_cpu , 1);
         if(timer_ticks()%TIME_SLICE==0){
-            thread_recalculate_priority();
+            thread_foreach(&thread_calculate_priority,NULL);
         }
 	}
 	/* Enforce preemption. */
 	if (++thread_ticks >= TIME_SLICE)
-		intr_yield_on_return();
+       intr_yield_on_return();
 }
 
 /* Prints thread statistics. */
@@ -263,10 +263,11 @@ void thread_unblock(struct thread *t) {
 	list_insert_ordered(&ready_list, &t->elem, more, NULL);
 	t->status = THREAD_READY;
 	//printf("unblocking %s %d %d\n",t->name,t->priority,thread_get_priority());
+
 	if (t->priority > thread_get_priority()
 			&& thread_current() != idle_thread) {
-		//printf("%s-->%s\n",thread_name(),t->name);
-		thread_yield();
+		if(!intr_context())
+            thread_yield();
 	}
 	intr_set_level(old_level);
 }
@@ -324,10 +325,8 @@ void thread_exit(void) {
 void thread_yield(void) {
 	struct thread *cur = thread_current();
 	enum intr_level old_level;
-
-	ASSERT(!intr_context ());
-
-	old_level = intr_disable();
+   ASSERT(!intr_context ());
+   old_level = intr_disable();
 	if (cur != idle_thread) {
 		//list_push_back (&ready_list, &cur->elem);
 		//printf("*******listing %s\n",cur->name);
@@ -405,8 +404,9 @@ void thread_set_nice(int nice) {
     thread_calculate_priority(thread_current());
     if(!list_empty(&ready_list)){
         struct thread * t = list_entry (list_max (&ready_list,&less, NULL),struct thread,elem);
-        if(thread_current ()->priority < t->priority)
-            thread_yield ();
+        if(thread_current ()->priority < t->priority){
+           thread_yield ();
+        }
     }
 }
 
@@ -425,7 +425,6 @@ int thread_get_load_avg(void) {
 }
 
 void calculate_load_avg(void) {
-    //printf("da5al ");
     int coeff1 = int_to_fixed_point(59);
     coeff1 = div_x_n(coeff1 , 60);
     int coeff2 = int_to_fixed_point(1);
@@ -436,9 +435,7 @@ void calculate_load_avg(void) {
     }
     coeff1 = fixed_point_multiply(coeff1 , load_avg);
     coeff2 = mul_x_n(coeff2 , ready_threads);
-    //printf("%d\n",add_fixed_point(coeff1 , coeff2));
     load_avg = add_fixed_point(coeff1 , coeff2);
-    //printf("%d\n",load_avg);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -450,7 +447,6 @@ int thread_get_recent_cpu(void) {
 }
 
 void thread_calculate_recent_cpu(struct thread *t){
-    //printf("entered ");
     int recent_cpu = t->recent_cpu;
     int curr_load_avg = load_avg;
     int temp;
@@ -460,8 +456,6 @@ void thread_calculate_recent_cpu(struct thread *t){
     recent_cpu = fixed_point_multiply(curr_load_avg, recent_cpu);
     recent_cpu = add_x_and_n(recent_cpu , t->nice);
     t->recent_cpu = recent_cpu;
-    //printf("%d\n" , t->recent_cpu);
-    //printf("curr=%d , load=%d , recent=%d ,nice=%d\n",curr_load_avg , load_avg , recent_cpu , t->nice);
 }
 
 void thread_calculate_priority(struct thread *t){
@@ -478,22 +472,6 @@ void thread_calculate_priority(struct thread *t){
         priority = PRI_MIN;
     }
     t->priority = priority;
-}
-
-void thread_recalculate_priority(void){
-    struct list_elem *e;
-    for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)){
-       // struct thread * t =
-        thread_calculate_priority(list_entry (e, struct thread, allelem));
-    }
-}
-
-void thread_recalculate_recent_cpu(void){
-    struct list_elem *e;
-    for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)){
-        //struct thread * t = ;
-        thread_calculate_recent_cpu(list_entry (e, struct thread, allelem));
-    }
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.

@@ -117,7 +117,7 @@ void timer_sleep(int64_t ticks) {
 	/******************** for debugging only ************************************/
 	//int64_t time_put_to_sleep;
 	//int64_t ticks_to_remain_sleep
-	
+
 	// list_sort(&sleeping_threads, lessWakeupTime, NULL);
 
 	// printf("first is idle ? %d \n", idle_thread == list_begin(&sleeping_threads));
@@ -125,7 +125,7 @@ void timer_sleep(int64_t ticks) {
 	// struct list_elem *e;
 	// for (e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads); e = list_next (e)){
 		// struct thread * t = list_entry (e, struct thread, sleep_elem);
-		// printf("%d ", t -> time_put_to_sleep + t->ticks_to_remain_sleep);	
+		// printf("%d ", t -> time_put_to_sleep + t->ticks_to_remain_sleep);
 	// }
 	// printf("\n");
 	/******************** for debugging only ************************************/
@@ -211,7 +211,6 @@ timer_print_stats (void)
 /* Timer interrupt handler. */
 static void timer_interrupt(struct intr_frame *args UNUSED) {
 	ticks++;
-
 	// checks the sleeping threads if any of them should be made ready
 	struct list_elem *e;
 	for (e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads); e = list_next (e)){
