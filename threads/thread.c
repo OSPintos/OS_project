@@ -354,14 +354,26 @@ void thread_foreach(thread_action_func *func, void *aux) {
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void thread_set_priority(int new_priority) {
+	enum intr_level old_level;
+	old_level = intr_disable();
+
+	int old_priority = thread_current() -> priority;
 	thread_current()->priority = new_priority;
 	thread_current()->initial_priority = new_priority;
 	thread_current()->priority = max_donation(thread_current());
 	struct thread *t = check_next_thread_to_run();
+
+	if (old_priority < thread_current() -> priority && thread_current()->lock_holder != NULL) {
+		thread_donate_priority(thread_current(),
+				thread_current()->lock_holder , thread_current()->i);
+	}
+
 	if (thread_get_priority() < t->priority
 			&& thread_current() != idle_thread) {
 		thread_yield();
 	}
+
+	intr_set_level(old_level);
 }
 
 /*current thread donate its priority to the lock holder*/
