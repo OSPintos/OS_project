@@ -37,9 +37,10 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-
+  char *save;
+  char *prog_name = strtok_r(file_name, " ", &save);
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (prog_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -63,9 +64,8 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success)
     thread_exit ();
-
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -88,6 +88,12 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+	int i;
+	for (i = 0; i < 1000000000; ++i) {
+		if(i%100000000==0)
+			;//printf("%d\n",i);
+	}
+
   return -1;
 }
 
@@ -222,13 +228,19 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  char *unused;
+  char *fn_copy;
+  fn_copy = palloc_get_page(0);
+  if (fn_copy == NULL)
+      return TID_ERROR;
+  strlcpy(fn_copy, file_name, PGSIZE);
+  char *name = strtok_r(fn_copy, " ", &unused);
+  file = filesys_open (name);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
-
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -305,6 +317,60 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (!setup_stack (esp))
     goto done;
 
+  /******************** Set up the stack *************************/
+      int argc = 0;     // Number of arguments
+      void **argv[256]; // Array of argument addresses on the stack
+      int offsets[256]; // Array of offsets from the beginning of file_name
+      int offset;
+      char *sp;
+      int length;
+
+      fn_copy = palloc_get_page(0);
+      if (fn_copy == NULL)
+          return TID_ERROR;
+      strlcpy(fn_copy, file_name, PGSIZE);
+      char *arg = strtok_r(fn_copy, " ", &sp);
+      offsets[0] = 0;
+      while (arg != NULL) {
+    	  printf("arg: %s\n",arg);
+          argc++;
+          offset = sp - fn_copy;
+          offsets[argc] = offset;
+          arg = strtok_r(NULL, " ", &sp);
+      }
+      for (i = argc-1; i >= 0; i--) {
+          length = offsets[i+1] - offsets[i] - 1;
+          if (i == argc-1)
+              length += 1;
+          *esp -= (length + 1);
+          argv[i] = *esp;
+          memcpy(*esp, fn_copy + offsets[i], length);
+          memset(*esp + length, '\0', 1);
+          //printf("%s - ",*(char **)esp);
+      }
+      palloc_free_page(fn_copy);
+      /* Word-align esp. */
+      if (((int) *esp) % 4 != 0) {
+          *esp -= (((uint32_t) *esp) % 4);
+      }
+      /* argv[argc] is set to 0. */
+      *esp -= sizeof(char *);
+      memset(*esp, 0, sizeof(char *));
+      for (i = argc-1; i >= 0; i--) {
+          /* argv[i] is set to its address on the stack. */
+          *esp -= sizeof(char *);
+          *(int *)*esp = argv[i];
+      }
+      /* Push argv, then argc. */
+      *esp -= sizeof(char **);
+      *(int *)*esp = *esp + sizeof(char *);
+      *esp -= sizeof(int);
+      *(int *)*esp = argc;
+      /* Push fake return address. */
+      *esp -= sizeof(void(*)());
+      memset(*esp, 0, sizeof(void(*)()));
+      printf("argc: %d\n",argc);
+      /************************End setup stack*******************************/
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
 
