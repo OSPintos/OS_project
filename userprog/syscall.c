@@ -15,16 +15,17 @@ static void syscall_handler(struct intr_frame *);
 void syscall_init(void) {
 	intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
-
 static void syscall_handler(struct intr_frame *f) {
-	int syscall_num = *(int *) (f->esp); //get the syscall_num from the stack
+	int *p = f->esp;
+	int syscall_num = *p; //get the syscall_num from the stack
 	if (syscall_num == SYS_WRITE) {
-		printf("Write\n");
+		//printf("Write\n");
+		f->eax = syscall_write(*(p+5),*(p+6),*(p+7));
 	}
 	else if (syscall_num == SYS_HALT)
 		syscall_halt();
 	else if (syscall_num == SYS_EXIT) {
-		syscall_exit(*(int *) (f->esp + 4));
+		syscall_exit(*(p+1));
 	}
 	return;
 }
@@ -44,6 +45,11 @@ static int get_user(const int *uaddr) {
 	return result;
 }
 int syscall_write(int fd, void *buffer, unsigned size) {
+	//printf("fd:%d size:%d\n", fd, size);
+	if (fd == 1) {
+		putbuf((char *)buffer, size);
+		return size;
+	}
 
 	return -1;
 }

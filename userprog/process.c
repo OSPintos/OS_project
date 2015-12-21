@@ -332,7 +332,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       char *arg = strtok_r(fn_copy, " ", &sp);
       offsets[0] = 0;
       while (arg != NULL) {
-    	  printf("arg: %s\n",arg);
+    	  //printf("arg: %s\n",arg);
           argc++;
           offset = sp - fn_copy;
           offsets[argc] = offset;
@@ -369,7 +369,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
       /* Push fake return address. */
       *esp -= sizeof(void(*)());
       memset(*esp, 0, sizeof(void(*)()));
-      printf("argc: %d\n",argc);
+      //printf("argc: %d\n",argc);
+      //hex_dump(0, *esp, (int) ((size_t) PHYS_BASE - (size_t) *esp), true);
       /************************End setup stack*******************************/
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
