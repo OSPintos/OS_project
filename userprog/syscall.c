@@ -20,12 +20,15 @@ static void syscall_handler(struct intr_frame *f) {
 	int syscall_num = *p; //get the syscall_num from the stack
 	if (syscall_num == SYS_WRITE) {
 		//printf("Write\n");
-		f->eax = syscall_write(*(p+5),*(p+6),*(p+7));
+		f->eax = syscall_write(*(p + 5), *(p + 6), *(p + 7));
 	}
 	else if (syscall_num == SYS_HALT)
 		syscall_halt();
 	else if (syscall_num == SYS_EXIT) {
-		syscall_exit(*(p+1));
+		syscall_exit(*(p + 1));
+	}
+	else if(syscall_num == SYS_WAIT){
+		f->eax = process_wait(*(p+1));
 	}
 	return;
 }
@@ -47,16 +50,31 @@ static int get_user(const int *uaddr) {
 int syscall_write(int fd, void *buffer, unsigned size) {
 	//printf("fd:%d size:%d\n", fd, size);
 	if (fd == 1) {
-		putbuf((char *)buffer, size);
+		putbuf((char *) buffer, size);
 		return size;
 	}
-
 	return -1;
 }
 void syscall_halt(void) {
 	shutdown_power_off();
 }
 void syscall_exit(int status) {
-	printf("%s: exit(%d)\n", thread_current()->name, status);
+	struct list_elem *e;
+
+	for (e = list_begin(&thread_current()->parent->child_proc);
+			e != list_end(&thread_current()->parent->child_proc);
+			e = list_next(e)) {
+		struct child *f = list_entry (e, struct child, elem);
+		if (f->tid == thread_current()->tid) {
+			f->used = true;
+			f->exit_error = status;
+		}
+	}
+
+	thread_current()->exit_error = status;
+
+	if (thread_current()->parent->waitingon == thread_current()->tid)
+		sema_up(&thread_current()->parent->child_lock);
+
 	thread_exit();
 }

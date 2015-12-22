@@ -43,6 +43,9 @@ process_execute (const char *file_name)
   tid = thread_create (prog_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
+  sema_down(&thread_current()->child_lock);
+  if(!thread_current()->success)
+	  return -1;
   return tid;
 }
 
@@ -64,8 +67,15 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success)
+  if (!success){
+	thread_current()->parent->success=false;
+	sema_up(&thread_current()->parent->child_lock);
     thread_exit ();
+  }
+  else{
+	  thread_current()->parent->success=true;
+	  sema_up(&thread_current()->parent->child_lock);
+  }
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -88,13 +98,35 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-	int i;
-	for (i = 0; i < 1000000000; ++i) {
-		if(i%100000000==0)
-			;//printf("%d\n",i);
-	}
+	struct list_elem *e;
 
-  return -1;
+	  struct child *ch=NULL;
+	  struct list_elem *e1=NULL;
+
+	  for (e = list_begin (&thread_current()->child_proc); e != list_end (&thread_current()->child_proc);
+	           e = list_next (e))
+	        {
+	          struct child *f = list_entry (e, struct child, elem);
+	          if(f->tid == child_tid)
+	          {
+	            ch = f;
+	            e1 = e;
+	          }
+	        }
+
+
+	  if(!ch || !e1)
+	    return -1;
+
+	  thread_current()->waitingon = ch->tid;
+
+	  if(!ch->used)
+	    sema_down(&thread_current()->child_lock);
+
+	  int temp = ch->exit_error;
+	  list_remove(e1);
+
+	  return temp;
 }
 
 /* Free the current process's resources. */
@@ -103,7 +135,9 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
+  int exit_code = cur->exit_error;
+  printf("%s: exit(%d)\n",cur->name,exit_code);
+  file_close(thread_current()->self);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -376,10 +410,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *eip = (void (*) (void)) ehdr.e_entry;
 
   success = true;
-
+  file_deny_write(file);
+  thread_current()->self = file;
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
   return success;
 }
 

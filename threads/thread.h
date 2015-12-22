@@ -44,49 +44,49 @@ typedef int tid_t;
 #define div_x_n(X,N) (X/N)
 
 /* A kernel thread or user process.
-   Each thread structure is stored in its own 4 kB page.  The
-   thread structure itself sits at the very bottom of the page
-   (at offset 0).  The rest of the page is reserved for the
-   thread's kernel stack, which grows downward from the top of
-   the page (at offset 4 kB).  Here's an illustration:
-        4 kB +---------------------------------+
-             |          kernel stack           |
-             |                |                |
-             |                |                |
-             |                V                |
-             |         grows downward          |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             +---------------------------------+
-             |              magic              |
-             |                :                |
-             |                :                |
-             |               name              |
-             |              status             |
-        0 kB +---------------------------------+
-   The upshot of this is twofold:
-      1. First, `struct thread' must not be allowed to grow too
-         big.  If it does, then there will not be enough room for
-         the kernel stack.  Our base `struct thread' is only a
-         few bytes in size.  It probably should stay well under 1
-         kB.
-      2. Second, kernel stacks must not be allowed to grow too
-         large.  If a stack overflows, it will corrupt the thread
-         state.  Thus, kernel functions should not allocate large
-         structures or arrays as non-static local variables.  Use
-         dynamic allocation with malloc() or palloc_get_page()
-         instead.
-   The first symptom of either of these problems will probably be
-   an assertion failure in thread_current(), which checks that
-   the `magic' member of the running thread's `struct thread' is
-   set to THREAD_MAGIC.  Stack overflow will normally change this
-   value, triggering the assertion. */
+ Each thread structure is stored in its own 4 kB page.  The
+ thread structure itself sits at the very bottom of the page
+ (at offset 0).  The rest of the page is reserved for the
+ thread's kernel stack, which grows downward from the top of
+ the page (at offset 4 kB).  Here's an illustration:
+ 4 kB +---------------------------------+
+ |          kernel stack           |
+ |                |                |
+ |                |                |
+ |                V                |
+ |         grows downward          |
+ |                                 |
+ |                                 |
+ |                                 |
+ |                                 |
+ |                                 |
+ |                                 |
+ |                                 |
+ |                                 |
+ +---------------------------------+
+ |              magic              |
+ |                :                |
+ |                :                |
+ |               name              |
+ |              status             |
+ 0 kB +---------------------------------+
+ The upshot of this is twofold:
+ 1. First, `struct thread' must not be allowed to grow too
+ big.  If it does, then there will not be enough room for
+ the kernel stack.  Our base `struct thread' is only a
+ few bytes in size.  It probably should stay well under 1
+ kB.
+ 2. Second, kernel stacks must not be allowed to grow too
+ large.  If a stack overflows, it will corrupt the thread
+ state.  Thus, kernel functions should not allocate large
+ structures or arrays as non-static local variables.  Use
+ dynamic allocation with malloc() or palloc_get_page()
+ instead.
+ The first symptom of either of these problems will probably be
+ an assertion failure in thread_current(), which checks that
+ the `magic' member of the running thread's `struct thread' is
+ set to THREAD_MAGIC.  Stack overflow will normally change this
+ value, triggering the assertion. */
 
 /* The `elem' member has a dual purpose.  It can be an element in
  the run queue (thread.c), or it can be an element in a
@@ -106,8 +106,8 @@ struct thread {
 	int donate[100];
 	int i;
 	struct list_elem allelem; /* List element for all threads list. */
-	int nice;                   /* nice value */
-	int recent_cpu;             /* recent cpu value */
+	int nice; /* nice value */
+	int recent_cpu; /* recent cpu value */
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem; /* List element. */
@@ -116,17 +116,27 @@ struct thread {
 	/* Owned by userprog/process.c. */
 	uint32_t *pagedir; /* Page directory. */
 #endif
-
-    /* Owned by thread.c. */
-    unsigned magic;                     /* Detects stack overflow. */
-
+	int exit_error;
+	bool success;
+	struct list child_proc;
+	struct thread* parent;
+	struct file *self;
+	struct semaphore child_lock;
+	int waitingon;
+	/* Owned by thread.c. */
+	unsigned magic; /* Detects stack overflow. */
 
 	struct list_elem sleep_elem;
 	struct list_elem ready_elem;
 	int64_t time_put_to_sleep;
 	int64_t ticks_to_remain_sleep;
-  };
-
+};
+struct child {
+	int tid;
+	struct list_elem elem;
+	int exit_error;
+	bool used;
+};
 
 /* If false (default), use round-robin scheduler.
  If true, use multi-level feedback queue scheduler.
@@ -172,7 +182,8 @@ bool more(const struct list_elem *a, const struct list_elem *b, void *aux);
 void thread_reset_priority(struct thread *t, int lock_id);
 
 // returns true if wakeuptime of a is less than wake up time of b
-bool lessWakeupTime(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool lessWakeupTime(const struct list_elem *a, const struct list_elem *b,
+		void *aux);
 
 void thread_donate_priority(struct thread *donor, struct thread *t, int lock_id);
 int max_donation(struct thread *t);
