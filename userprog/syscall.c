@@ -11,10 +11,16 @@
 #include "threads/malloc.h"
 #include "filesys/file.h"
 
+struct lock mylock;
+
 static void syscall_handler(struct intr_frame *);
 void syscall_init(void) {
 	intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
+	lock_init(&mylock);
 }
+
+
+
 static void syscall_handler(struct intr_frame *f) {
 	int *p = f->esp;
 	int syscall_num = *p; //get the syscall_num from the stack
@@ -30,6 +36,17 @@ static void syscall_handler(struct intr_frame *f) {
 	else if(syscall_num == SYS_WAIT){
 		f->eax = process_wait(*(p+1));
 	}
+
+	else if(syscall_num == SYS_CREATE){
+		lock_acquire(&mylock);
+		
+		bool res = filesys_create(*(p + 1), *(p + 2));
+
+		lock_release(&mylock);
+
+		f -> eax = res;
+	}
+
 	return;
 }
 
