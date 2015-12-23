@@ -10,6 +10,7 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 #include "filesys/file.h"
+#include "filesys/filesys.h"
 
 typedef int pid_t;
 static struct lock file_lock;
@@ -51,6 +52,9 @@ static void syscall_handler(struct intr_frame *f) {
 		lock_release(&mylock);
 
 		f -> eax = res;
+	}
+	else if(syscall_num == SYS_REMOVE){
+        f->eax = syscall_remove(*(p+1));
 	}
 	return;
 }
@@ -122,27 +126,16 @@ void syscall_exit(int status) {
 }
 pid_t exec (const char *cmd_line)
 {
-    lock_acquire(&mylock);
+    lock_acquire(&file_lock);
     pid_t pid = process_execute(cmd_line);
-    //process_wait(pid);
-    lock_release(&mylock);
-    /*struct list_elem *e;
-    struct child *f;
-    for (e = list_begin(&thread_current()->child_proc);
-			e != list_end(&thread_current()->child_proc);
-			e = list_next(e)) {
-		f = list_entry (e, struct child, elem);
-		if(pid == f->tid) break;
-		}
-		ASSERT(f);
-        while (f->load == NOT_LOADED)
-        {
-            barrier();
-        }
-        if (f->load == LOAD_FAIL)
-        {
-            return ERROR;
-        }*/
+    lock_release(&file_lock);
+    return pid;
+}
 
-  return pid;
+bool syscall_remove (const char *file)
+{
+  lock_acquire(&file_lock);
+  bool success = filesys_remove(file);
+  lock_release(&file_lock);
+  return success;
 }
