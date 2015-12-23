@@ -40,7 +40,7 @@ static void syscall_handler(struct intr_frame *f) {
 		f->eax = process_wait(*(p+1));
 	}
 	else if(syscall_num == SYS_EXEC){
-        f->eax = sys_exec(*(p+1));
+        f->eax = exec(*(p+1));
     }
 
 	else if(syscall_num == SYS_CREATE){
@@ -120,12 +120,29 @@ void syscall_exit(int status) {
 
 	thread_exit();
 }
-pid_t sys_exec (const char *cmd_line)
+pid_t exec (const char *cmd_line)
 {
-  lock_acquire (&file_lock);
-  int ret = process_execute (cmd_line);
-  lock_release (&file_lock);
-  return ret;
+    lock_acquire(&mylock);
+    pid_t pid = process_execute(cmd_line);
+    //process_wait(pid);
+    lock_release(&mylock);
+    /*struct list_elem *e;
+    struct child *f;
+    for (e = list_begin(&thread_current()->child_proc);
+			e != list_end(&thread_current()->child_proc);
+			e = list_next(e)) {
+		f = list_entry (e, struct child, elem);
+		if(pid == f->tid) break;
+		}
+		ASSERT(f);
+        while (f->load == NOT_LOADED)
+        {
+            barrier();
+        }
+        if (f->load == LOAD_FAIL)
+        {
+            return ERROR;
+        }*/
+
+  return pid;
 }
-
-

@@ -136,6 +136,7 @@ struct child {
 	struct list_elem elem;
 	int exit_error;
 	bool used;
+	//int load;
 };
 
 /* If false (default), use round-robin scheduler.
