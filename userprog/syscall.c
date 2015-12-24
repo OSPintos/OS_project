@@ -56,6 +56,9 @@ static void syscall_handler(struct intr_frame *f) {
 	else if(syscall_num == SYS_REMOVE){
         f->eax = syscall_remove(*(p+1));
 	}
+	else if(syscall_num == SYS_OPEN){
+		f -> eax = syscall_open(*(p+1));
+	}
 	return;
 }
 
@@ -138,4 +141,39 @@ bool syscall_remove (const char *file)
   bool success = filesys_remove(file);
   lock_release(&file_lock);
   return success;
+}
+
+
+
+int syscall_open(const char *file){
+	lock_acquire(&mylock);
+	if(file == NULL){
+		lock_release(&mylock);
+		return -1;
+	}
+	// printf("[MY_DEBUG] HERE_OPEN_SYSCALL\n");
+
+	if(thread_current() -> open_files_list == NULL){
+		// printf("[MY_DEBUG] INITIALIZING OPEN_FILES_LIST\n");		
+		thread_current() -> open_files_list = (struct file **)malloc(sizeof(struct file *) * 101);
+		thread_current() -> open_files_list[0] = NULL; // empty list
+	}
+
+
+	struct file *myfile = filesys_open(file);
+	if(!myfile)
+		return -1;
+	
+	int i = 0;
+	while(thread_current() -> open_files_list[i] != NULL && i < 99){
+		i++;
+	}
+
+	if(i >= 99)
+		return -1;
+	thread_current() -> open_files_list[i] = myfile;
+	thread_current() -> open_files_list[i + 1] = NULL;
+	lock_release(&mylock);
+
+	return i + 2;
 }

@@ -130,6 +130,8 @@ struct thread {
 	struct list_elem ready_elem;
 	int64_t time_put_to_sleep;
 	int64_t ticks_to_remain_sleep;
+
+	struct file ** open_files_list;
 };
 struct child {
 	int tid;
