@@ -69,6 +69,11 @@ static void syscall_handler(struct intr_frame *f) {
 		get_user(*(p+1));
 		f -> eax = syscall_open(*(p+1));
 	}
+	else if(syscall_num == SYS_FILESIZE){
+		get_user(p+1);
+		get_user(*(p+1));
+		f -> eax = syscall_filesize(*(p+1));
+	}
 	return;
 }
 
@@ -173,7 +178,7 @@ int syscall_open(const char *file){
 	// printf("[MY_DEBUG] HERE_OPEN_SYSCALL\n");
 
 	if(thread_current() -> open_files_list == NULL){
-		// printf("[MY_DEBUG] INITIALIZING OPEN_FILES_LIST\n");		
+		// printf("[MY_DEBUG] INITIALIZING OPEN_FILES_LIST\n");
 		thread_current() -> open_files_list = (struct file **)malloc(sizeof(struct file *) * 101);
 		thread_current() -> open_files_list[0] = NULL; // empty list
 	}
@@ -182,7 +187,7 @@ int syscall_open(const char *file){
 	struct file *myfile = filesys_open(file);
 	if(!myfile)
 		return -1;
-	
+
 	int i = 0;
 	while(thread_current() -> open_files_list[i] != NULL && i < 99){
 		i++;
@@ -195,4 +200,14 @@ int syscall_open(const char *file){
 	lock_release(&mylock);
 
 	return i + 2;
+}
+
+int syscall_filesize(int fd){
+    int size = -1;
+    if(thread_current() -> open_files_list[fd-2] != NULL){
+        lock_acquire(&file_lock);
+        size = file_length(thread_current() -> open_files_list[fd-2]);
+        lock_release(&file_lock);
+    }
+    return size;
 }
