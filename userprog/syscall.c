@@ -78,6 +78,16 @@ static void syscall_handler(struct intr_frame *f) {
 		get_user(*(p+2));
 		f -> eax = syscall_read(*(p+1), *(p + 2), *(p + 3));
 	}
+	else if(syscall_num == SYS_SEEK){
+		get_user(p+1);
+		get_user(*(p+1));
+		syscall_seek(*(p+1) , *(p+2));
+	}
+	else if(syscall_num == SYS_TELL){
+		get_user(p+1);
+		get_user(*(p+1));
+		f -> eax = syscall_tell(*(p+1));
+	}
 	return;
 }
 
@@ -216,6 +226,7 @@ int syscall_filesize(int fd){
     return size;
 }
 
+
 int syscall_read(int fd, void *buffer, unsigned length){
 	if(fd == 1 || fd < 0 || fd > 99)
 		syscall_exit(-1);
@@ -224,4 +235,22 @@ int syscall_read(int fd, void *buffer, unsigned length){
     int res = file_read(thread_current() -> open_files_list[fd - 2], buffer, length);
     lock_release(&mylock);
     return res;
+}
+
+void syscall_seek(int fd, unsigned position){
+    if(thread_current() -> open_files_list[fd-2] != NULL){
+        lock_acquire(&file_lock);
+        file_seek(thread_current()->open_files_list[fd-2] , position);
+        lock_release(&file_lock);
+    }
+}
+
+unsigned syscall_tell(int fd){
+    unsigned position = 0;
+    if(thread_current() -> open_files_list[fd-2] != NULL){
+        lock_acquire(&file_lock);
+        position = file_tell(thread_current()->open_files_list[fd-2]);
+        lock_release(&file_lock);
+    }
+    return position;
 }
