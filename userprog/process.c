@@ -145,7 +145,14 @@ process_exit (void)
   int exit_code = cur->exit_error;
   printf("%s: exit(%d)\n",cur->name,exit_code);
   file_close(thread_current()->self);
-
+  if(thread_current() -> open_files_list != NULL){
+	  int j = 0;
+	  while(thread_current() -> open_files_list[j]!= NULL){
+		  struct file *f = thread_current() -> open_files_list[j];
+		  file_close(f);
+		  j++;
+	  }
+  }
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
