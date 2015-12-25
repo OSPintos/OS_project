@@ -152,7 +152,8 @@ page_fault (struct intr_frame *f)
       f->eax= 0xffffffff;
       return;
   }
-    thread_exit();
+  thread_current()->exit_error = -1;
+  kill (f);
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
@@ -162,6 +163,6 @@ page_fault (struct intr_frame *f)
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");
-  kill (f);
+
 }
 

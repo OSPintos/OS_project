@@ -27,36 +27,46 @@ void syscall_init(void) {
 
 static void syscall_handler(struct intr_frame *f) {
 	int *p = f->esp;
+	get_user(p);
 	int syscall_num = *p; //get the syscall_num from the stack
 	if (syscall_num == SYS_WRITE) {
 		//printf("Write\n");
-		f->eax = syscall_write(*(p + 5), *(p + 6), *(p + 7));
+		get_user(p+3);
+		get_user(*(p+2));
+		f->eax = syscall_write(*(p + 1), *(p + 2), *(p + 3));
 	}
 	else if (syscall_num == SYS_HALT)
 		syscall_halt();
 	else if (syscall_num == SYS_EXIT) {
+		get_user(p+1);
 		syscall_exit(*(p + 1));
 	}
 	else if(syscall_num == SYS_WAIT){
+		get_user(p+1);
 		f->eax = process_wait(*(p+1));
 	}
 	else if(syscall_num == SYS_EXEC){
+		get_user(p+1);
+		get_user(*(p+1));
         f->eax = exec(*(p+1));
     }
 
 	else if(syscall_num == SYS_CREATE){
+		get_user(p+2);
+		get_user(*(p+1));
 		lock_acquire(&mylock);
-
 		bool res = filesys_create(*(p + 1), *(p + 2));
-
 		lock_release(&mylock);
-
 		f -> eax = res;
 	}
 	else if(syscall_num == SYS_REMOVE){
+		get_user(p+1);
+		get_user(*(p+1));
         f->eax = syscall_remove(*(p+1));
 	}
 	else if(syscall_num == SYS_OPEN){
+		get_user(p+1);
+		get_user(*(p+1));
 		f -> eax = syscall_open(*(p+1));
 	}
 	return;
@@ -67,13 +77,15 @@ static void syscall_handler(struct intr_frame *f) {
  Returns the byte value if successful, -1 if a segfault
  occurred. */
 static int get_user(const int *uaddr) {
-	if ((void *) uaddr >= PHYS_BASE) {
-		printf("EXIT");
+	if (!is_user_vaddr(uaddr)) {
 		syscall_exit(-1);
+		return -1;
 	}
 	int result;
 	asm ("movl $1f, %0; movzbl %1, %0; 1:"
 			: "=&a" (result) : "m" (*uaddr));
+	if(result == -1)
+		syscall_exit(-1);
 	return result;
 }
 
@@ -84,7 +96,6 @@ static bool
 put_user (uint8_t *udst, uint8_t byte)
 {
     if ((void *) udst >= PHYS_BASE) {
-		printf("EXIT");
 		syscall_exit(-1);
 	}
   int error_code;

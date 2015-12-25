@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -352,60 +353,54 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
 
   /******************** Set up the stack *************************/
-      int argc = 0;     // Number of arguments
-      void **argv[256]; // Array of argument addresses on the stack
-      int offsets[256]; // Array of offsets from the beginning of file_name
-      int offset;
-      char *sp;
-      int length;
+  char *token;
+  char *save_ptr;
+  int argc = 0;
+  i = 0;
+  char * copy = malloc(strlen(file_name)+1);
+  strlcpy (copy, file_name, strlen(file_name)+1);
 
-      fn_copy = palloc_get_page(0);
-      if (fn_copy == NULL)
-          return TID_ERROR;
-      strlcpy(fn_copy, file_name, PGSIZE);
-      char *arg = strtok_r(fn_copy, " ", &sp);
-      offsets[0] = 0;
-      while (arg != NULL) {
-    	  //printf("arg: %s\n",arg);
-          argc++;
-          offset = sp - fn_copy;
-          offsets[argc] = offset;
-          arg = strtok_r(NULL, " ", &sp);
+    int *argv = calloc(256,sizeof(int));
+    for (token = strtok_r (copy, " ", &save_ptr),i=0; token != NULL;
+      token = strtok_r (NULL, " ", &save_ptr),i++){
+        *esp -= strlen(token) + 1;
+        memcpy(*esp,token,strlen(token) + 1);
+
+        argv[i]=*esp;
+        argc++;
       }
-      for (i = argc-1; i >= 0; i--) {
-          length = offsets[i+1] - offsets[i] - 1;
-          if (i == argc-1)
-              length += 1;
-          *esp -= (length + 1);
-          argv[i] = *esp;
-          memcpy(*esp, fn_copy + offsets[i], length);
-          memset(*esp + length, '\0', 1);
-          //printf("%s - ",*(char **)esp);
-      }
-      palloc_free_page(fn_copy);
-      /* Word-align esp. */
-      if (((int) *esp) % 4 != 0) {
-          *esp -= (((uint32_t) *esp) % 4);
-      }
-      /* argv[argc] is set to 0. */
-      *esp -= sizeof(char *);
-      memset(*esp, 0, sizeof(char *));
-      for (i = argc-1; i >= 0; i--) {
-          /* argv[i] is set to its address on the stack. */
-          *esp -= sizeof(char *);
-          *(int *)*esp = argv[i];
-      }
-      /* Push argv, then argc. */
-      *esp -= sizeof(char **);
-      *(int *)*esp = *esp + sizeof(char *);
-      *esp -= sizeof(int);
-      *(int *)*esp = argc;
-      /* Push fake return address. */
-      *esp -= sizeof(void(*)());
-      memset(*esp, 0, sizeof(void(*)()));
-      //printf("argc: %d\n",argc);
-      //hex_dump(0, *esp, (int) ((size_t) PHYS_BASE - (size_t) *esp), true);
-      /************************End setup stack*******************************/
+
+    while((int)*esp%4!=0){
+      *esp-=sizeof(char);
+      char x = 0;
+      memcpy(*esp,&x,sizeof(char));
+    }
+
+    int zero = 0;
+
+    *esp-=sizeof(int);
+    memcpy(*esp,&zero,sizeof(int));
+
+    for(i=argc-1;i>=0;i--)
+    {
+      *esp-=sizeof(int);
+      memcpy(*esp,&argv[i],sizeof(int));
+    }
+
+    int pt = *esp;
+    *esp-=sizeof(int);
+    memcpy(*esp,&pt,sizeof(int));
+
+    *esp-=sizeof(int);
+    memcpy(*esp,&argc,sizeof(int));
+
+    *esp-=sizeof(int);
+    memcpy(*esp,&zero,sizeof(int));
+
+    free(copy);
+    free(argv);
+    //hex_dump(0, *esp, (int) ((size_t) PHYS_BASE - (size_t) *esp), true);
+   /************************End setup stack*******************************/
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
 
