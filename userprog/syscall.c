@@ -73,6 +73,10 @@ static void syscall_handler(struct intr_frame *f) {
 		get_user(p+1);
 		get_user(*(p+1));
 		f -> eax = syscall_filesize(*(p+1));
+	}else if(syscall_num == SYS_READ){
+		get_user(p+3);
+		get_user(*(p+2));
+		f -> eax = syscall_read(*(p+1), *(p + 2), *(p + 3));
 	}
 	return;
 }
@@ -210,4 +214,14 @@ int syscall_filesize(int fd){
         lock_release(&file_lock);
     }
     return size;
+}
+
+int syscall_read(int fd, void *buffer, unsigned length){
+	if(fd == 1 || fd < 0 || fd > 99)
+		syscall_exit(-1);
+
+	lock_acquire(&mylock);
+    int res = file_read(thread_current() -> open_files_list[fd - 2], buffer, length);
+    lock_release(&mylock);
+    return res;
 }
