@@ -30,6 +30,7 @@ tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
+  char *prog_name;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -39,9 +40,12 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
   char *save;
-  char *prog_name = strtok_r(file_name, " ", &save);
+  prog_name = malloc(strlen(file_name)+1);
+  strlcpy (prog_name, file_name, strlen(file_name)+1);
+  prog_name = strtok_r(prog_name, " ", &save);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (prog_name, PRI_DEFAULT, start_process, fn_copy);
+  free(prog_name);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   sema_down(&thread_current()->child_lock);
@@ -136,9 +140,12 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+  if(cur->exit_error==-100)
+        syscall_exit(-1);
   int exit_code = cur->exit_error;
   printf("%s: exit(%d)\n",cur->name,exit_code);
   file_close(thread_current()->self);
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -265,10 +272,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Open executable file. */
   char *unused;
   char *fn_copy;
-  fn_copy = palloc_get_page(0);
-  if (fn_copy == NULL)
-      return TID_ERROR;
-  strlcpy(fn_copy, file_name, PGSIZE);
+  fn_copy = malloc (strlen(file_name)+1);
+  strlcpy(fn_copy, file_name, strlen(file_name)+1);
   char *name = strtok_r(fn_copy, " ", &unused);
   file = filesys_open (name);
   if (file == NULL) 

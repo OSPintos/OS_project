@@ -100,12 +100,20 @@ static int get_user(const int *uaddr) {
 		syscall_exit(-1);
 		return -1;
 	}
+	void *ptr = pagedir_get_page(thread_current()->pagedir, uaddr);
+	if (!ptr){
+		syscall_exit(-1);
+		return -1;
+	}
+	return ptr;
+	/*
 	int result;
 	asm ("movl $1f, %0; movzbl %1, %0; 1:"
 			: "=&a" (result) : "m" (*uaddr));
 	if(result == -1)
 		syscall_exit(-1);
 	return result;
+	*/
 }
 
 /* Writes BYTE to user address UDST.
@@ -168,9 +176,20 @@ void syscall_exit(int status) {
 pid_t exec (const char *cmd_line)
 {
     lock_acquire(&file_lock);
-    pid_t pid = process_execute(cmd_line);
-    lock_release(&file_lock);
-    return pid;
+    char * fn_cp = malloc (strlen(cmd_line)+1);
+    strlcpy(fn_cp, cmd_line, strlen(cmd_line)+1);
+    char * save_ptr;
+    fn_cp = strtok_r(fn_cp," ",&save_ptr);
+    struct file* f = filesys_open (fn_cp);
+    if(f==NULL){
+    	lock_release(&file_lock);
+    	return -1;
+    }
+    else{
+    	file_close(f);
+    	lock_release(&file_lock);
+    	return process_execute(cmd_line);
+    }
 }
 
 bool syscall_remove (const char *file)
