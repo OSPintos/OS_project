@@ -124,9 +124,17 @@ int syscall_write(int fd, void *buffer, unsigned size) {
 	if (fd == 1) {
 		putbuf((char *) buffer, size);
 		return size;
+	}else if(fd < 1 || fd > 99){
+		syscall_exit(-1);
+	}else{
+		lock_acquire(&mylock);
+		int res = file_write(thread_current() -> open_files_list[fd - 2], buffer, size);
+		lock_release(&mylock);
+		return res;
 	}
 	return -1;
 }
+
 void syscall_halt(void) {
 	shutdown_power_off();
 }
