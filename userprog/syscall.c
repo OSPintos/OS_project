@@ -14,13 +14,13 @@
 
 typedef int pid_t;
 static struct lock file_lock;
-struct lock mylock;
+//struct lock mylock;
 
 static void syscall_handler(struct intr_frame *);
 void syscall_init(void) {
 	intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 	lock_init (&file_lock);
-	lock_init(&mylock);
+	//lock_init(&mylock);
 }
 
 
@@ -54,9 +54,9 @@ static void syscall_handler(struct intr_frame *f) {
 	else if(syscall_num == SYS_CREATE){
 		get_user(p+2);
 		get_user(*(p+1));
-		lock_acquire(&mylock);
+		lock_acquire(&file_lock);
 		bool res = filesys_create(*(p + 1), *(p + 2));
-		lock_release(&mylock);
+		lock_release(&file_lock);
 		f -> eax = res;
 	}
 	else if(syscall_num == SYS_REMOVE){
@@ -71,12 +71,25 @@ static void syscall_handler(struct intr_frame *f) {
 	}
 	else if(syscall_num == SYS_FILESIZE){
 		get_user(p+1);
-		get_user(*(p+1));
-		f -> eax = syscall_filesize(*(p+1));
+		lock_acquire(&file_lock);
+		struct file *file = thread_current() -> open_files_list[*(p+1)-2];
+		int32_t size = file_length(file);
+		f->eax = size;
+		lock_release(&file_lock);
+		//f -> eax = syscall_filesize(*(p+1));
 	}else if(syscall_num == SYS_READ){
 		get_user(p+3);
 		get_user(*(p+2));
-		f -> eax = syscall_read(*(p+1), *(p + 2), *(p + 3));
+		//printf("***%d\n",*(p+1));
+		if(*(p+1)==0){
+			int i;
+			uint8_t* buffer = *(p+2);
+			for(i=0;i<*(p+3);i++)
+				buffer[i] = input_getc();
+				f->eax = *(p+3);
+		}
+		else
+			f -> eax = syscall_read(*(p+1), *(p + 2), *(p + 3));
 	}
 	else if(syscall_num == SYS_SEEK){
 		get_user(p+1);
@@ -136,12 +149,15 @@ int syscall_write(int fd, void *buffer, unsigned size) {
 	if (fd == 1) {
 		putbuf((char *) buffer, size);
 		return size;
-	}else if(fd < 1 || fd > 99){
-		syscall_exit(-1);
+	}else if(fd < 2 || fd > 99){
+		return -1;
 	}else{
-		lock_acquire(&mylock);
-		int res = file_write(thread_current() -> open_files_list[fd - 2], buffer, size);
-		lock_release(&mylock);
+		lock_acquire(&file_lock);
+		struct file *f = thread_current() -> open_files_list[fd - 2];
+		if(f == NULL)
+			return -1;
+		int res = file_write(f, buffer, size);
+		lock_release(&file_lock);
 		return res;
 	}
 	return -1;
@@ -203,9 +219,9 @@ bool syscall_remove (const char *file)
 
 
 int syscall_open(const char *file){
-	lock_acquire(&mylock);
+	lock_acquire(&file_lock);
 	if(file == NULL){
-		lock_release(&mylock);
+		lock_release(&file_lock);
 		return -1;
 	}
 	// printf("[MY_DEBUG] HERE_OPEN_SYSCALL\n");
@@ -230,30 +246,32 @@ int syscall_open(const char *file){
 		return -1;
 	thread_current() -> open_files_list[i] = myfile;
 	thread_current() -> open_files_list[i + 1] = NULL;
-	lock_release(&mylock);
-
+	lock_release(&file_lock);
 	return i + 2;
 }
 
 int syscall_filesize(int fd){
     int size = -1;
-    if(thread_current() -> open_files_list[fd-2] != NULL){
         lock_acquire(&file_lock);
         size = file_length(thread_current() -> open_files_list[fd-2]);
         lock_release(&file_lock);
-    }
+
     return size;
 }
 
 
 int syscall_read(int fd, void *buffer, unsigned length){
-	if(fd == 1 || fd < 0 || fd > 99)
+	if(fd < 2 || fd > 99)
 		syscall_exit(-1);
 
-	lock_acquire(&mylock);
-    int res = file_read(thread_current() -> open_files_list[fd - 2], buffer, length);
-    lock_release(&mylock);
+	lock_acquire(&file_lock);
+	struct file *f = thread_current() -> open_files_list[fd - 2];
+	if(f == NULL)
+		return -1;
+    int res = file_read(f, buffer, length);
+    lock_release(&file_lock);
     return res;
+
 }
 
 void syscall_seek(int fd, unsigned position){
