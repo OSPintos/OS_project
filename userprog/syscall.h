@@ -2,6 +2,7 @@
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
 typedef int pid_t;
+
 static int get_user(const int *uaddr);
 static bool put_user(uint8_t *udst, uint8_t byte);
 void syscall_init (void);

@@ -150,7 +150,7 @@ int syscall_write(int fd, void *buffer, unsigned size) {
 		putbuf((char *) buffer, size);
 		return size;
 	}else if(fd < 2 || fd > 99){
-		return -1;
+		syscall_exit(-1);
 	}else{
 		lock_acquire(&file_lock);
 		struct file *f = thread_current() -> open_files_list[fd - 2];
